@@ -1,0 +1,20 @@
+# Machine Learning
+torch
+datasets
+transformers
+
+# Web Server & Utilities
+fastapi
+uvicorn[standard]
+pydantic
+psutil
+
+# Document Ingestion & Web Scraping
+pypdf
+python-docx
+beautifulsoup4
+
+# Local OCR (Optional - comment out if you experience CUDA compiler issues on Windows)
+pillow
+numpy
+easyocr

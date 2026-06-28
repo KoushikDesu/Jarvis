@@ -1,0 +1,13 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Temporary files
+custom_llm/stop_signal.txt
+backend/temp_uploads/*
+
+# Google Colab Drive checkpoints (Should be synced via Drive, not GitHub, due to GitHub's 100MB file limit)
+custom_llm/checkpoint.pt
+custom_llm/dataset_cache/
