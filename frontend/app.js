@@ -26,6 +26,12 @@ document.addEventListener("DOMContentLoaded", () => {
     initTraining();
     checkNetworkStatus();
     
+    // Set dynamic Colab download link
+    const colabLink = document.getElementById("colab-download-link");
+    if (colabLink) {
+        colabLink.href = `${API_URL}/api/download/colab`;
+    }
+    
     // Periodically check connection status
     setInterval(checkNetworkStatus, 5000);
 });
@@ -91,16 +97,21 @@ function initSettings() {
     const ollamaGroup = document.getElementById("settings-group-ollama");
     const geminiKeyInput = document.getElementById("gemini-key-input");
     const ollamaModelInput = document.getElementById("ollama-model-input");
+    const gdriveLinkInput = document.getElementById("gdrive-link-input");
     const saveBtn = document.getElementById("save-settings-btn");
+    const syncBtn = document.getElementById("sync-gdrive-btn");
+    const syncStatus = document.getElementById("sync-status-msg");
     
     // Load local storage values
     const savedModel = localStorage.getItem("model_routing") || "gemini";
     const savedGeminiKey = localStorage.getItem("gemini_api_key") || "";
     const savedOllamaModel = localStorage.getItem("ollama_model_name") || "phi3";
+    const savedGDriveLink = localStorage.getItem("gdrive_share_link") || "";
     
     modelSelect.value = savedModel;
     geminiKeyInput.value = savedGeminiKey;
     ollamaModelInput.value = savedOllamaModel;
+    gdriveLinkInput.value = savedGDriveLink;
     
     updateSettingsVisibility(savedModel);
     updateModelTag(savedModel);
@@ -113,9 +124,50 @@ function initSettings() {
         localStorage.setItem("model_routing", modelSelect.value);
         localStorage.setItem("gemini_api_key", geminiKeyInput.value);
         localStorage.setItem("ollama_model_name", ollamaModelInput.value);
+        localStorage.setItem("gdrive_share_link", gdriveLinkInput.value);
         
         updateModelTag(modelSelect.value);
         alert("Configurations saved successfully!");
+    });
+
+    syncBtn.addEventListener("click", async () => {
+        const link = gdriveLinkInput.value.trim();
+        if (!link) {
+            syncStatus.textContent = "Please enter a valid Google Drive sharing link first!";
+            syncStatus.style.color = "#ef4444";
+            return;
+        }
+        
+        syncStatus.textContent = "Downloading weights from Google Drive... Please wait.";
+        syncStatus.style.color = "#3b82f6";
+        syncBtn.disabled = true;
+        syncBtn.style.opacity = "0.7";
+        
+        try {
+            const resp = await fetch(`${API_URL}/api/model/sync`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ share_link: link })
+            });
+            
+            const data = await resp.json();
+            if (resp.ok) {
+                syncStatus.textContent = data.message || "Weights synced successfully!";
+                syncStatus.style.color = "#10b981";
+            } else {
+                syncStatus.textContent = `Error: ${data.detail || "Failed to download weights"}`;
+                syncStatus.style.color = "#ef4444";
+            }
+        } catch (err) {
+            console.error(err);
+            syncStatus.textContent = "Network error: Connection to backend failed.";
+            syncStatus.style.color = "#ef4444";
+        } finally {
+            syncBtn.disabled = false;
+            syncBtn.style.opacity = "1";
+        }
     });
     
     function updateSettingsVisibility(val) {

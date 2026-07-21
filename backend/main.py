@@ -40,6 +40,38 @@ train_manager = TrainingManager()
 custom_model = None
 custom_tokenizer = None
 
+import re
+
+def download_file_from_google_drive(share_link: str, destination: str):
+    """Download a public file from Google Drive using its share link."""
+    file_id = None
+    file_id_match = re.search(r'/d/([a-zA-Z0-9-_]+)', share_link)
+    if file_id_match:
+        file_id = file_id_match.group(1)
+    else:
+        id_param_match = re.search(r'id=([a-zA-Z0-9-_]+)', share_link)
+        if id_param_match:
+            file_id = id_param_match.group(1)
+            
+    if not file_id:
+        return False
+        
+    download_url = f"https://docs.google.com/uc?export=download&id={file_id}"
+    try:
+        print(f"Downloading checkpoint from Google Drive ID: {file_id}...")
+        req = urllib.request.Request(
+            download_url,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        )
+        with urllib.request.urlopen(req, timeout=45) as response:
+            with open(destination, 'wb') as out_file:
+                shutil.copyfileobj(response, out_file)
+        print("Download successful.")
+        return True
+    except Exception as e:
+        print(f"Failed to download Google Drive checkpoint: {e}")
+        return False
+
 class ChatMessage(BaseModel):
     role: str
     content: str
@@ -59,10 +91,12 @@ def run_custom_model_inference(prompt: str, max_tokens: int = 150):
     global custom_model, custom_tokenizer
     import torch
     
-    # Try Google Drive sync folder first, fall back to local folder
-    g_drive_path = "G:/My Drive/CustomLLM/checkpoint.pt"
-    checkpoint_path = g_drive_path if os.path.exists(g_drive_path) else "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt"
-    
+    # Try the cloud-downloaded checkpoint first, then fallback to Drive sync or local path
+    checkpoint_path = "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint_cloud.pt"
+    if not os.path.exists(checkpoint_path):
+        g_drive_path = "G:/My Drive/CustomLLM/checkpoint.pt"
+        checkpoint_path = g_drive_path if os.path.exists(g_drive_path) else "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt"
+        
     if not os.path.exists(checkpoint_path):
         return f"System error: Checkpoint file not found. Checked: '{checkpoint_path}'. Please run training first!"
         
@@ -365,6 +399,38 @@ def download_colab():
     if os.path.exists(notebook_path):
         return FileResponse(notebook_path, media_type="application/octet-stream", filename="colab_training.ipynb")
     raise HTTPException(status_code=404, detail="Notebook file not found.")
+
+class SyncRequest(BaseModel):
+    share_link: str
+
+@app.post("/api/model/sync")
+def sync_model_weights(request: SyncRequest):
+    """Force download the latest checkpoint from Google Drive to the backend server."""
+    global custom_model, custom_tokenizer
+    dest_path = "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint_cloud.pt"
+    
+    success = download_file_from_google_drive(request.share_link, dest_path)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to download file. Verify your Google Drive share link is valid and set to 'Anyone with link can view'.")
+        
+    # Reset model caches to force reloading the new checkpoint on the next request
+    custom_model = None
+    custom_tokenizer = None
+    
+    try:
+        import torch
+        checkpoint = torch.load(dest_path, map_location="cpu", weights_only=False)
+        epoch = checkpoint.get("epoch", 0)
+        step = checkpoint.get("step", 0)
+        loss = checkpoint.get("loss", 0.0)
+        return {
+            "success": True, 
+            "message": f"Successfully synced weights! Loaded model at Epoch {epoch+1}, Step {step} with Loss {loss:.4f}."
+        }
+    except Exception as e:
+        if os.path.exists(dest_path):
+            os.remove(dest_path)
+        raise HTTPException(status_code=500, detail=f"Downloaded file is corrupted: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
