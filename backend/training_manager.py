@@ -13,6 +13,11 @@ class TrainingManager:
         stop_signal_path="c:/Rarey Temp/Ai/With Ai/custom_llm/stop_signal.txt",
         checkpoint_path="c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt"
     ):
+        g_drive_dir = "G:/My Drive/CustomLLM"
+        if os.path.exists(g_drive_dir):
+            checkpoint_path = os.path.join(g_drive_dir, "checkpoint.pt")
+            log_path = os.path.join(g_drive_dir, "train_log.json")
+
         self.script_path = script_path
         self.log_path = log_path
         self.stop_signal_path = stop_signal_path

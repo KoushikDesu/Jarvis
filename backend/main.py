@@ -59,9 +59,12 @@ def run_custom_model_inference(prompt: str, max_tokens: int = 150):
     global custom_model, custom_tokenizer
     import torch
     
-    checkpoint_path = "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt"
+    # Try Google Drive sync folder first, fall back to local folder
+    g_drive_path = "G:/My Drive/CustomLLM/checkpoint.pt"
+    checkpoint_path = g_drive_path if os.path.exists(g_drive_path) else "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt"
+    
     if not os.path.exists(checkpoint_path):
-        return "System error: Local checkpoint not found. Please run training first to build model weights!"
+        return f"System error: Checkpoint file not found. Checked: '{checkpoint_path}'. Please run training first!"
         
     try:
         if custom_model is None:

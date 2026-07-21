@@ -13,6 +13,18 @@ from model import GPT, TransformerConfig
 from tokenizer import RobustTokenizer
 from dataset import TextDataset
 
+def get_resolved_checkpoint_path(default_path="c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt"):
+    g_drive_dir = "G:/My Drive/CustomLLM"
+    if os.path.exists(g_drive_dir):
+        return os.path.join(g_drive_dir, "checkpoint.pt")
+    return default_path
+
+def get_resolved_log_path(default_path="c:/Rarey Temp/Ai/With Ai/custom_llm/train_log.json"):
+    g_drive_dir = "G:/My Drive/CustomLLM"
+    if os.path.exists(g_drive_dir):
+        return os.path.join(g_drive_dir, "train_log.json")
+    return default_path
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train custom GPT model from scratch with checkpointing")
     parser.add_argument("--epochs", type=int, default=10, help="Number of training epochs")
@@ -24,8 +36,12 @@ def parse_args():
     parser.add_argument("--n_head", type=int, default=4, help="Number of attention heads")
     parser.add_argument("--n_embd", type=int, default=256, help="Embedding dimension")
     parser.add_argument("--save_interval", type=int, default=100, help="Save checkpoint every N steps")
-    parser.add_argument("--checkpoint_path", type=str, default="c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt", help="Path to checkpoint file")
-    parser.add_argument("--log_path", type=str, default="c:/Rarey Temp/Ai/With Ai/custom_llm/train_log.json", help="Path to write training JSON log")
+    
+    default_checkpoint = get_resolved_checkpoint_path()
+    default_log = get_resolved_log_path()
+    
+    parser.add_argument("--checkpoint_path", type=str, default=default_checkpoint, help="Path to checkpoint file")
+    parser.add_argument("--log_path", type=str, default=default_log, help="Path to write training JSON log")
     return parser.parse_args()
 
 def save_checkpoint(model, optimizer, epoch, step, loss, path):
