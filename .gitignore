@@ -8,6 +8,8 @@ __pycache__/
 custom_llm/stop_signal.txt
 backend/temp_uploads/*
 
-# Google Colab Drive checkpoints (Should be synced via Drive, not GitHub, due to GitHub's 100MB file limit)
+# Google Colab checkpoints & download caches
 custom_llm/checkpoint.pt
+custom_llm/checkpoint_cloud.pt
 custom_llm/dataset_cache/
+*.pt

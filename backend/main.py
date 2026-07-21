@@ -42,8 +42,10 @@ custom_tokenizer = None
 
 import re
 
+import http.cookiejar
+
 def download_file_from_google_drive(share_link: str, destination: str):
-    """Download a public file from Google Drive using its share link."""
+    """Download a public file from Google Drive using its share link, bypassing virus warnings for large files."""
     file_id = None
     file_id_match = re.search(r'/d/([a-zA-Z0-9-_]+)', share_link)
     if file_id_match:
@@ -56,18 +58,52 @@ def download_file_from_google_drive(share_link: str, destination: str):
     if not file_id:
         return False
         
-    download_url = f"https://docs.google.com/uc?export=download&id={file_id}"
+    url = f"https://docs.google.com/uc?export=download&id={file_id}"
     try:
-        print(f"Downloading checkpoint from Google Drive ID: {file_id}...")
+        # Use CookieJar to store session cookies for the confirmation bypass
+        cookie_jar = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+        
         req = urllib.request.Request(
-            download_url,
+            url,
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         )
-        with urllib.request.urlopen(req, timeout=45) as response:
+        response = opener.open(req)
+        content = response.read()
+        
+        # Check if we got the confirmation page (contains the download form)
+        html_str = content.decode('utf-8', errors='ignore')
+        if 'id="download-form"' in html_str:
+            print("Detected Google Drive large file warning page. Parsing form inputs...")
+            
+            # Extract action URL
+            action_match = re.search(r'action="([^"]+)"', html_str)
+            action_url = action_match.group(1) if action_match else "https://drive.usercontent.google.com/download"
+            
+            # Extract all hidden inputs: name="XXX" value="YYY"
+            inputs = re.findall(r'<input type="hidden" name="([^"]+)" value="([^"]+)">', html_str)
+            params = {name: val for name, val in inputs}
+            
+            # Construct the final download URL
+            query_str = urllib.parse.urlencode(params)
+            download_url = f"{action_url}?{query_str}"
+            print(f"Bypassing warning. Final download URL: {download_url}")
+            
+            req2 = urllib.request.Request(
+                download_url,
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            )
+            response2 = opener.open(req2)
             with open(destination, 'wb') as out_file:
-                shutil.copyfileobj(response, out_file)
-        print("Download successful.")
-        return True
+                shutil.copyfileobj(response2, out_file)
+            print("Download successful (with confirmation bypass).")
+            return True
+        else:
+            # If no warning page, save direct content
+            with open(destination, 'wb') as out_file:
+                out_file.write(content)
+            print("Download successful.")
+            return True
     except Exception as e:
         print(f"Failed to download Google Drive checkpoint: {e}")
         return False
