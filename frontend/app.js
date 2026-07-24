@@ -267,6 +267,47 @@ function initSettings() {
         }
     });
     
+    // Jarvis Node Runner Toggles
+    const copyBtn = document.getElementById("copy-run-btn");
+    if (copyBtn) {
+        copyBtn.addEventListener("click", () => {
+            const cmd = document.getElementById("local-run-command").innerText;
+            navigator.clipboard.writeText(cmd);
+            showToast("Command copied to clipboard!");
+        });
+    }
+
+    const toggleNodeBtn = document.getElementById("toggle-backend-node-btn");
+    if (toggleNodeBtn && backendUrlInput) {
+        const updateNodeBtnText = (url) => {
+            if (url.includes("127.0.0.1") || url.includes("localhost")) {
+                toggleNodeBtn.textContent = "Switch to Cloud Render (Production)";
+                toggleNodeBtn.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+            } else {
+                toggleNodeBtn.textContent = "Switch to Localhost Node (127.0.0.1)";
+                toggleNodeBtn.style.background = "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)";
+            }
+        };
+        
+        // Initial setup
+        updateNodeBtnText(backendUrlInput.value);
+        
+        toggleNodeBtn.addEventListener("click", () => {
+            const currentUrl = backendUrlInput.value.trim();
+            let newUrl = "https://jarvis-backend-0cvr.onrender.com";
+            if (!currentUrl.includes("127.0.0.1") && !currentUrl.includes("localhost")) {
+                newUrl = "http://127.0.0.1:8000";
+            }
+            
+            backendUrlInput.value = newUrl;
+            localStorage.setItem("backend_api_url", newUrl);
+            API_URL = newUrl;
+            updateNodeBtnText(newUrl);
+            checkNetworkStatus();
+            showToast(`API switched to ${newUrl}`);
+        });
+    }
+    
     function updateSettingsVisibility(val) {
         if (geminiGroup) {
             geminiGroup.style.display = val === "gemini" ? "flex" : "none";

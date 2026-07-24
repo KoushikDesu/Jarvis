@@ -363,6 +363,20 @@
                         <span id="sync-status-msg" style="font-size: 0.9rem; color: #a1a1aa; font-weight: 500;"></span>
                     </div>
                 </div>
+
+                <div class="settings-card" style="margin-top: 20px;">
+                    <h2>Jarvis Node Runner</h2>
+                    <p class="field-desc" style="margin-bottom: 15px;">To run the backend locally on another computer or system, run this startup command in your terminal:</p>
+                    
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 15px;">
+                        <pre style="margin: 0; color: #34d399; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all;" id="local-run-command">git clone https://github.com/KoushikDesu/Jarvis.git && cd Jarvis && pip install -r requirements.txt && python backend/main.py</pre>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                        <button class="save-settings-btn" id="copy-run-btn" style="margin: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff;">Copy Startup Command</button>
+                        <button class="save-settings-btn" id="toggle-backend-node-btn" style="margin: 0; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">Switch to Localhost Node (127.0.0.1)</button>
+                    </div>
+                </div>
             </section>
             
         </main>

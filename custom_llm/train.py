@@ -125,7 +125,16 @@ def train():
     # 2. Tokenizer and Dataset
     tokenizer = RobustTokenizer(force_type=force_type)
     dataset = TextDataset(tokenizer, block_size=args.block_size, split="train")
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, pin_memory=(device == "cuda"))
+    
+    # Use background workers on Linux (Colab) to load data in parallel, removing CPU bottleneck
+    num_workers = 2 if sys.platform != 'win32' else 0
+    dataloader = DataLoader(
+        dataset, 
+        batch_size=args.batch_size, 
+        shuffle=True, 
+        pin_memory=(device == "cuda"),
+        num_workers=num_workers
+    )
     
     # 3. Model setup
     if checkpoint:
@@ -153,6 +162,14 @@ def train():
         last_loss = 0.0
         
     model.to(device)
+    
+    # Compiles operations into fast kernel calls, increasing GPU utilization on Google Colab
+    if hasattr(torch, 'compile') and sys.platform != 'win32':
+        try:
+            print("Compiling model for faster training on GPU (Triton)...")
+            model = torch.compile(model)
+        except Exception as compile_err:
+            print(f"Skipping compilation: {compile_err}")
     
     # 4. Optimizer and GradScaler for Mixed Precision (RTX 3050 benefits from FP16)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
