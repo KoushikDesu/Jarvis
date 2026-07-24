@@ -145,14 +145,28 @@ def run_custom_model_inference(prompt: str, max_tokens: int = 150):
             from tokenizer import RobustTokenizer
             
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            print(f"Loading custom model to {device} for inference...")
-            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
-            config = checkpoint['config']
+            print(f"Loading custom model to {device} for inference (memory-optimized)...")
             
+            # Load checkpoint dict
+            checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+            config = checkpoint['config']
+            state_dict = checkpoint['model_state_dict']
+            
+            # Immediately delete the massive checkpoint wrapper dictionary to free RAM
+            del checkpoint
+            import gc
+            gc.collect()
+            
+            # Instantiate model
             custom_model = GPT(config)
-            custom_model.load_state_dict(checkpoint['model_state_dict'])
+            custom_model.load_state_dict(state_dict)
             custom_model.to(device)
             custom_model.eval()
+            
+            # Immediately delete temporary state_dict and clean up RAM again
+            del state_dict
+            gc.collect()
+            
             # Force character tokenizer if model vocab size is small
             force_type = "char" if config.vocab_size < 1000 else None
             custom_tokenizer = RobustTokenizer(force_type=force_type)
@@ -443,6 +457,7 @@ def download_colab():
 
 class SyncRequest(BaseModel):
     share_link: str
+    log_share_link: Optional[str] = None
 
 # Sync progress tracking state
 sync_state = {
@@ -450,7 +465,7 @@ sync_state = {
     "message": ""
 }
 
-def perform_weight_sync(share_link: str, dest_path: str):
+def perform_weight_sync(share_link: str, dest_path: str, log_share_link: Optional[str] = None):
     global custom_model, custom_tokenizer, sync_state
     sync_state["status"] = "syncing"
     sync_state["message"] = "Downloading weights from Google Drive..."
@@ -460,6 +475,12 @@ def perform_weight_sync(share_link: str, dest_path: str):
             sync_state["status"] = "failed"
             sync_state["message"] = "Failed to download file from Google Drive. Verify your share link is set to 'Anyone with link can view'."
             return
+            
+        # Download log history if optional link is provided
+        if log_share_link:
+            sync_state["message"] = "Downloading training logs from Google Drive..."
+            log_dest = os.path.join(workspace_dir, "custom_llm", "train_log.json")
+            download_file_from_google_drive(log_share_link, log_dest)
             
         sync_state["message"] = "Verifying model checkpoint and loading configurations..."
         
@@ -472,6 +493,22 @@ def perform_weight_sync(share_link: str, dest_path: str):
         epoch = checkpoint.get("epoch", 0)
         step = checkpoint.get("step", 0)
         loss = checkpoint.get("loss", 0.0)
+        history = checkpoint.get("history", [])
+        
+        # De-allocate checkpoint dictionary wrapper to save memory
+        del checkpoint
+        import gc
+        gc.collect()
+        
+        # If history logs exist in the checkpoint, write them to train_log.json
+        if history:
+            log_dest = os.path.join(workspace_dir, "custom_llm", "train_log.json")
+            try:
+                with open(log_dest, "w") as f:
+                    json.dump(history, f)
+                print(f"Extracted {len(history)} log points from checkpoint and saved to train_log.json.")
+            except Exception as history_err:
+                print(f"Failed to write extracted history to {log_dest}: {history_err}")
         
         sync_state["status"] = "success"
         sync_state["message"] = f"Successfully synced weights! Loaded model at Epoch {epoch+1}, Step {step} with Loss {loss:.4f}."
@@ -492,7 +529,7 @@ def sync_model_weights(request: SyncRequest, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="A synchronization is already in progress.")
         
     dest_path = os.path.join(workspace_dir, "custom_llm", "checkpoint_cloud.pt")
-    background_tasks.add_task(perform_weight_sync, request.share_link, dest_path)
+    background_tasks.add_task(perform_weight_sync, request.share_link, dest_path, request.log_share_link)
     return {
         "success": True, 
         "message": "Weights synchronization started in the background. Please wait 1-2 minutes."

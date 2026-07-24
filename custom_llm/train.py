@@ -45,16 +45,27 @@ def parse_args():
     return parser.parse_args()
 
 def save_checkpoint(model, optimizer, epoch, step, loss, path):
+    # Try to load the log history and bundle it inside the checkpoint
+    log_file = path.replace("checkpoint.pt", "train_log.json").replace("checkpoint_cloud.pt", "train_log.json")
+    history = []
+    if os.path.exists(log_file):
+        try:
+            with open(log_file, "r") as f:
+                history = json.load(f)
+        except:
+            pass
+            
     checkpoint = {
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'epoch': epoch,
         'step': step,
         'loss': loss,
-        'config': model.config
+        'config': model.config,
+        'history': history
     }
     torch.save(checkpoint, path)
-    print(f"\n[CHECKPOINT] Saved checkpoint to {path} at Epoch {epoch}, Step {step}, Loss {loss:.4f}")
+    print(f"\n[CHECKPOINT] Saved checkpoint to {path} at Epoch {epoch}, Step {step}, Loss {loss:.4f} (with {len(history)} history points)")
 
 def load_checkpoint(path, device):
     if os.path.exists(path):

@@ -6,22 +6,20 @@ import json
 import psutil
 
 class TrainingManager:
-    def __init__(
-        self, 
-        script_path="c:/Rarey Temp/Ai/With Ai/custom_llm/train.py",
-        log_path="c:/Rarey Temp/Ai/With Ai/custom_llm/train_log.json",
-        stop_signal_path="c:/Rarey Temp/Ai/With Ai/custom_llm/stop_signal.txt",
-        checkpoint_path="c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt"
-    ):
+    def __init__(self, script_path=None, log_path=None, stop_signal_path=None, checkpoint_path=None):
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        workspace_dir = os.path.dirname(backend_dir)
+        
+        self.script_path = script_path or os.path.join(workspace_dir, "custom_llm", "train.py")
+        self.log_path = log_path or os.path.join(workspace_dir, "custom_llm", "train_log.json")
+        self.stop_signal_path = stop_signal_path or os.path.join(workspace_dir, "custom_llm", "stop_signal.txt")
+        self.checkpoint_path = checkpoint_path or os.path.join(workspace_dir, "custom_llm", "checkpoint.pt")
+        
         g_drive_dir = "G:/My Drive/CustomLLM"
         if os.path.exists(g_drive_dir):
-            checkpoint_path = os.path.join(g_drive_dir, "checkpoint.pt")
-            log_path = os.path.join(g_drive_dir, "train_log.json")
-
-        self.script_path = script_path
-        self.log_path = log_path
-        self.stop_signal_path = stop_signal_path
-        self.checkpoint_path = checkpoint_path
+            self.checkpoint_path = os.path.join(g_drive_dir, "checkpoint.pt")
+            self.log_path = os.path.join(g_drive_dir, "train_log.json")
+            
         self.process = None
 
     def get_status(self):

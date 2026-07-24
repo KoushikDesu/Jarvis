@@ -353,6 +353,11 @@
                         <input type="text" id="gdrive-link-input" placeholder="https://drive.google.com/file/d/FILE_ID/view?usp=sharing" class="premium-input" style="width: 100%; padding: 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; margin-top: 8px;">
                         <p class="field-desc">Share your <code>checkpoint.pt</code> file on Google Drive as <strong>"Anyone with link can view"</strong>, copy the sharing link, and paste it here.</p>
                     </div>
+                    <div class="settings-group" style="margin-top: 15px;">
+                        <label for="gdrive-log-link-input">Google Drive Log Link (train_log.json) - Optional</label>
+                        <input type="text" id="gdrive-log-link-input" placeholder="https://drive.google.com/file/d/LOG_FILE_ID/view?usp=sharing" class="premium-input" style="width: 100%; padding: 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; margin-top: 8px;">
+                        <p class="field-desc">Optional: Share your <code>train_log.json</code> file on Google Drive as <strong>"Anyone with link can view"</strong> to load your training history curves.</p>
+                    </div>
                     <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                         <button class="save-settings-btn" id="sync-gdrive-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin: 0;">Sync Google Drive Weights</button>
                         <span id="sync-status-msg" style="font-size: 0.9rem; color: #a1a1aa; font-weight: 500;"></span>

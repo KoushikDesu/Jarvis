@@ -133,6 +133,7 @@ function initSettings() {
     const geminiGroup = document.getElementById("settings-group-key");
     const geminiKeyInput = document.getElementById("gemini-key-input");
     const gdriveLinkInput = document.getElementById("gdrive-link-input");
+    const gdriveLogLinkInput = document.getElementById("gdrive-log-link-input");
     const backendUrlInput = document.getElementById("backend-url-input");
     const saveBtn = document.getElementById("save-settings-btn");
     const syncBtn = document.getElementById("sync-gdrive-btn");
@@ -142,11 +143,15 @@ function initSettings() {
     const savedModel = localStorage.getItem("model_routing") || "gemini";
     const savedGeminiKey = localStorage.getItem("gemini_api_key") || "";
     const savedGDriveLink = localStorage.getItem("gdrive_share_link") || "";
+    const savedGDriveLogLink = localStorage.getItem("gdrive_log_share_link") || "";
     const savedBackendUrl = localStorage.getItem("backend_api_url") || "https://jarvis-backend-0cvr.onrender.com";
     
     modelSelect.value = savedModel;
     geminiKeyInput.value = savedGeminiKey;
     gdriveLinkInput.value = savedGDriveLink;
+    if (gdriveLogLinkInput) {
+        gdriveLogLinkInput.value = savedGDriveLogLink;
+    }
     if (backendUrlInput) {
         backendUrlInput.value = savedBackendUrl;
     }
@@ -164,6 +169,9 @@ function initSettings() {
         localStorage.setItem("model_routing", modelSelect.value);
         localStorage.setItem("gemini_api_key", geminiKeyInput.value);
         localStorage.setItem("gdrive_share_link", gdriveLinkInput.value);
+        if (gdriveLogLinkInput) {
+            localStorage.setItem("gdrive_log_share_link", gdriveLogLinkInput.value);
+        }
         localStorage.setItem("backend_api_url", newUrl);
         
         // Dynamically update active API URL
@@ -175,6 +183,7 @@ function initSettings() {
 
     syncBtn.addEventListener("click", async () => {
         const link = gdriveLinkInput.value.trim();
+        const logLink = gdriveLogLinkInput ? gdriveLogLinkInput.value.trim() : "";
         if (!link) {
             syncStatus.textContent = "Please enter a valid Google Drive sharing link first!";
             syncStatus.style.color = "#ef4444";
@@ -192,7 +201,10 @@ function initSettings() {
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ share_link: link })
+                body: JSON.stringify({ 
+                    share_link: link,
+                    log_share_link: logLink || null
+                })
             });
             
             const data = await resp.json();
