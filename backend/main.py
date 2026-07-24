@@ -473,6 +473,52 @@ def sync_model_weights(request: SyncRequest):
             os.remove(dest_path)
         raise HTTPException(status_code=500, detail=f"Downloaded file is corrupted: {str(e)}")
 
+@app.get("/api/debug/download")
+def debug_download(share_link: str):
+    import http.cookiejar
+    import urllib.parse
+    import re
+    import urllib.request
+    import shutil
+    
+    file_id = None
+    file_id_match = re.search(r'/d/([a-zA-Z0-9-_]+)', share_link)
+    if file_id_match:
+        file_id = file_id_match.group(1)
+    else:
+        id_param_match = re.search(r'id=([a-zA-Z0-9-_]+)', share_link)
+        if id_param_match:
+            file_id = id_param_match.group(1)
+            
+    if not file_id:
+        return {"error": "Invalid file ID"}
+        
+    url = f"https://docs.google.com/uc?export=download&id={file_id}"
+    try:
+        cookie_jar = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        )
+        response = opener.open(req)
+        content = response.read()
+        html_str = content.decode('utf-8', errors='ignore')
+        
+        return {
+            "status": "success",
+            "url_called": url,
+            "has_download_form": 'id="download-form"' in html_str,
+            "has_recaptcha": 'recaptcha' in html_str.lower(),
+            "first_1000_chars": html_str[:1000]
+        }
+    except Exception as e:
+        return {
+            "status": "failed",
+            "error": str(e),
+            "type": type(e).__name__
+        }
+
 if __name__ == "__main__":
     import uvicorn
     # Bind to environment variable PORT for cloud compatibility, default to 8000 locally
