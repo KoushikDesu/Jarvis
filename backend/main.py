@@ -31,7 +31,7 @@ app.add_middleware(
 )
 
 # Temp storage directory for uploads
-UPLOAD_DIR = "c:/Rarey Temp/Ai/With Ai/backend/temp_uploads"
+UPLOAD_DIR = os.path.join(workspace_dir, "backend", "temp_uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Instantiations
@@ -130,17 +130,17 @@ def run_custom_model_inference(prompt: str, max_tokens: int = 150):
     import torch
     
     # Try the cloud-downloaded checkpoint first, then fallback to Drive sync or local path
-    checkpoint_path = "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint_cloud.pt"
+    checkpoint_path = os.path.join(workspace_dir, "custom_llm", "checkpoint_cloud.pt")
     if not os.path.exists(checkpoint_path):
         g_drive_path = "G:/My Drive/CustomLLM/checkpoint.pt"
-        checkpoint_path = g_drive_path if os.path.exists(g_drive_path) else "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint.pt"
+        checkpoint_path = g_drive_path if os.path.exists(g_drive_path) else os.path.join(workspace_dir, "custom_llm", "checkpoint.pt")
         
     if not os.path.exists(checkpoint_path):
         return f"System error: Checkpoint file not found. Checked: '{checkpoint_path}'. Please run training first!"
         
     try:
         if custom_model is None:
-            sys.path.append("c:/Rarey Temp/Ai/With Ai/custom_llm")
+            sys.path.append(os.path.join(workspace_dir, "custom_llm"))
             from model import GPT
             from tokenizer import RobustTokenizer
             
@@ -448,7 +448,7 @@ class SyncRequest(BaseModel):
 def sync_model_weights(request: SyncRequest):
     """Force download the latest checkpoint from Google Drive to the backend server."""
     global custom_model, custom_tokenizer
-    dest_path = "c:/Rarey Temp/Ai/With Ai/custom_llm/checkpoint_cloud.pt"
+    dest_path = os.path.join(workspace_dir, "custom_llm", "checkpoint_cloud.pt")
     
     success = download_file_from_google_drive(request.share_link, dest_path)
     if not success:
