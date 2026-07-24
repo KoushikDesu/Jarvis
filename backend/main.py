@@ -10,8 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 
-# Add workspace directories to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add workspace directories and custom_llm folder to path
+workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(workspace_dir)
+sys.path.append(os.path.join(workspace_dir, "custom_llm"))
 
 from backend.web_search import get_search_context, is_connected
 from backend.document_parser import DocumentParser
