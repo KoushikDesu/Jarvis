@@ -1,7 +1,7 @@
 // Gemini Clone Frontend Application Logic
 
 // API Configuration
-const API_URL = "http://127.0.0.1:8000";
+let API_URL = localStorage.getItem("backend_api_url") || "http://127.0.0.1:8000";
 
 // State Variables
 let currentTab = "chat";
@@ -98,6 +98,7 @@ function initSettings() {
     const geminiKeyInput = document.getElementById("gemini-key-input");
     const ollamaModelInput = document.getElementById("ollama-model-input");
     const gdriveLinkInput = document.getElementById("gdrive-link-input");
+    const backendUrlInput = document.getElementById("backend-url-input");
     const saveBtn = document.getElementById("save-settings-btn");
     const syncBtn = document.getElementById("sync-gdrive-btn");
     const syncStatus = document.getElementById("sync-status-msg");
@@ -107,11 +108,15 @@ function initSettings() {
     const savedGeminiKey = localStorage.getItem("gemini_api_key") || "";
     const savedOllamaModel = localStorage.getItem("ollama_model_name") || "phi3";
     const savedGDriveLink = localStorage.getItem("gdrive_share_link") || "";
+    const savedBackendUrl = localStorage.getItem("backend_api_url") || "http://127.0.0.1:8000";
     
     modelSelect.value = savedModel;
     geminiKeyInput.value = savedGeminiKey;
     ollamaModelInput.value = savedOllamaModel;
     gdriveLinkInput.value = savedGDriveLink;
+    if (backendUrlInput) {
+        backendUrlInput.value = savedBackendUrl;
+    }
     
     updateSettingsVisibility(savedModel);
     updateModelTag(savedModel);
@@ -121,10 +126,22 @@ function initSettings() {
     });
     
     saveBtn.addEventListener("click", () => {
+        const newUrl = backendUrlInput ? backendUrlInput.value.trim() : "http://127.0.0.1:8000";
+        
         localStorage.setItem("model_routing", modelSelect.value);
         localStorage.setItem("gemini_api_key", geminiKeyInput.value);
         localStorage.setItem("ollama_model_name", ollamaModelInput.value);
         localStorage.setItem("gdrive_share_link", gdriveLinkInput.value);
+        localStorage.setItem("backend_api_url", newUrl);
+        
+        // Dynamically update active API URL
+        API_URL = newUrl;
+        
+        // Update notebook download link endpoint
+        const colabLink = document.getElementById("colab-download-link");
+        if (colabLink) {
+            colabLink.href = `${API_URL}/api/download/colab`;
+        }
         
         updateModelTag(modelSelect.value);
         alert("Configurations saved successfully!");
