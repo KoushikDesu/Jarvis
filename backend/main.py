@@ -127,6 +127,13 @@ class ChatRequest(BaseModel):
 def run_custom_model_inference(prompt: str, max_tokens: int = 150):
     """Load model checkpoint and generate response locally."""
     global custom_model, custom_tokenizer
+    
+    # Gracefully disable on Render free tier to prevent OOM memory crashes
+    if os.environ.get("RENDER") == "true":
+        return ("Notice: Inference on custom PyTorch models is disabled on the free Render.com cloud tier "
+                "due to the strict 512MB RAM limit. To test your custom model, please run a local Jarvis Node "
+                "on your laptop and toggle the connection using the 'Jarvis Node Runner' panel in the Settings tab!")
+                
     import torch
     
     # Try the cloud-downloaded checkpoint first, then fallback to Drive sync or local path
@@ -484,6 +491,12 @@ def perform_weight_sync(share_link: str, dest_path: str, log_share_link: Optiona
             
         sync_state["message"] = "Verifying model checkpoint and loading configurations..."
         
+        if os.environ.get("RENDER") == "true":
+            # Skip loading checkpoint in PyTorch to prevent memory spikes on Render free tier
+            sync_state["status"] = "success"
+            sync_state["message"] = "Successfully synced weights! Checkpoint downloaded to cloud server (PyTorch load skipped to prevent memory limits)."
+            return
+            
         # Reset caches
         custom_model = None
         custom_tokenizer = None
