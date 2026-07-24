@@ -181,7 +181,7 @@ function initSettings() {
             return;
         }
         
-        syncStatus.textContent = "Downloading weights from Google Drive... Please wait.";
+        syncStatus.textContent = "Initiating weight synchronization...";
         syncStatus.style.color = "#3b82f6";
         syncBtn.disabled = true;
         syncBtn.style.opacity = "0.7";
@@ -197,32 +197,59 @@ function initSettings() {
             
             const data = await resp.json();
             if (resp.ok) {
-                syncStatus.textContent = data.message || "Weights synced successfully!";
-                syncStatus.style.color = "#10b981";
-                showToast("Weights synced successfully!");
+                syncStatus.textContent = "Sync task accepted. Downloading in background...";
+                showToast("Sync task started in the background!");
                 
-                // Automatically fetch training history and update the loss curve chart
-                try {
-                    const resHistory = await fetch(`${API_URL}/api/train/history`);
-                    const history = await resHistory.json();
-                    if (history && history.length > 0) {
-                        plotLossChart(history);
-                        showToast("Loss curves updated successfully!");
+                // Poll status endpoint until finished
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const statusResp = await fetch(`${API_URL}/api/model/sync/status`);
+                        if (statusResp.ok) {
+                            const statusData = await statusResp.json();
+                            syncStatus.textContent = statusData.message || "Syncing...";
+                            
+                            if (statusData.status === "success") {
+                                clearInterval(pollInterval);
+                                syncStatus.style.color = "#10b981";
+                                syncBtn.disabled = false;
+                                syncBtn.style.opacity = "1";
+                                showToast("Weights synced successfully!");
+                                
+                                // Redraw loss chart
+                                try {
+                                    const resHistory = await fetch(`${API_URL}/api/train/history`);
+                                    const history = await resHistory.json();
+                                    if (history && history.length > 0) {
+                                        plotLossChart(history);
+                                        showToast("Loss curves updated successfully!");
+                                    }
+                                } catch (historyErr) {
+                                    console.error("Error loading loss history:", historyErr);
+                                }
+                            } else if (statusData.status === "failed") {
+                                clearInterval(pollInterval);
+                                syncStatus.style.color = "#ef4444";
+                                syncBtn.disabled = false;
+                                syncBtn.style.opacity = "1";
+                                showToast("Weight sync failed", "error");
+                            }
+                        }
+                    } catch (pollErr) {
+                        console.error("Error polling sync status:", pollErr);
                     }
-                } catch (historyErr) {
-                    console.error("Error loading loss history:", historyErr);
-                }
+                }, 3000);
             } else {
-                syncStatus.textContent = `Error: ${data.detail || "Failed to download weights"}`;
+                syncStatus.textContent = `Error: ${data.detail || "Failed to start sync"}`;
                 syncStatus.style.color = "#ef4444";
-                showToast("Failed to sync weights", "error");
+                showToast("Failed to start sync", "error");
+                syncBtn.disabled = false;
+                syncBtn.style.opacity = "1";
             }
         } catch (err) {
             console.error(err);
             syncStatus.textContent = "Network error: Connection to backend failed.";
             syncStatus.style.color = "#ef4444";
             showToast("Connection to server failed", "error");
-        } finally {
             syncBtn.disabled = false;
             syncBtn.style.opacity = "1";
         }

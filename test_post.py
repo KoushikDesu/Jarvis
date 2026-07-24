@@ -8,7 +8,7 @@ payload = {"share_link": "https://drive.google.com/file/d/10LZDLeaQssJWGrvZM5ITB
 req = urllib.request.Request(
     url,
     data=json.dumps(payload).encode(),
-    headers={"Content-Type": "application/json"}
+    headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
 )
 
 try:

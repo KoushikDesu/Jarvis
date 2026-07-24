@@ -5,7 +5,7 @@ import shutil
 import urllib.request
 import urllib.error
 import json
-from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -444,34 +444,64 @@ def download_colab():
 class SyncRequest(BaseModel):
     share_link: str
 
-@app.post("/api/model/sync")
-def sync_model_weights(request: SyncRequest):
-    """Force download the latest checkpoint from Google Drive to the backend server."""
-    global custom_model, custom_tokenizer
-    dest_path = os.path.join(workspace_dir, "custom_llm", "checkpoint_cloud.pt")
-    
-    success = download_file_from_google_drive(request.share_link, dest_path)
-    if not success:
-        raise HTTPException(status_code=400, detail="Failed to download file. Verify your Google Drive share link is valid and set to 'Anyone with link can view'.")
-        
-    # Reset model caches to force reloading the new checkpoint on the next request
-    custom_model = None
-    custom_tokenizer = None
-    
+# Sync progress tracking state
+sync_state = {
+    "status": "idle",  # "idle", "syncing", "success", "failed"
+    "message": ""
+}
+
+def perform_weight_sync(share_link: str, dest_path: str):
+    global custom_model, custom_tokenizer, sync_state
+    sync_state["status"] = "syncing"
+    sync_state["message"] = "Downloading weights from Google Drive..."
     try:
+        success = download_file_from_google_drive(share_link, dest_path)
+        if not success:
+            sync_state["status"] = "failed"
+            sync_state["message"] = "Failed to download file from Google Drive. Verify your share link is set to 'Anyone with link can view'."
+            return
+            
+        sync_state["message"] = "Verifying model checkpoint and loading configurations..."
+        
+        # Reset caches
+        custom_model = None
+        custom_tokenizer = None
+        
         import torch
         checkpoint = torch.load(dest_path, map_location="cpu", weights_only=False)
         epoch = checkpoint.get("epoch", 0)
         step = checkpoint.get("step", 0)
         loss = checkpoint.get("loss", 0.0)
-        return {
-            "success": True, 
-            "message": f"Successfully synced weights! Loaded model at Epoch {epoch+1}, Step {step} with Loss {loss:.4f}."
-        }
+        
+        sync_state["status"] = "success"
+        sync_state["message"] = f"Successfully synced weights! Loaded model at Epoch {epoch+1}, Step {step} with Loss {loss:.4f}."
     except Exception as e:
         if os.path.exists(dest_path):
-            os.remove(dest_path)
-        raise HTTPException(status_code=500, detail=f"Downloaded file is corrupted: {str(e)}")
+            try:
+                os.remove(dest_path)
+            except:
+                pass
+        sync_state["status"] = "failed"
+        sync_state["message"] = f"Verification failed: {str(e)}. The checkpoint might be corrupted."
+
+@app.post("/api/model/sync")
+def sync_model_weights(request: SyncRequest, background_tasks: BackgroundTasks):
+    """Force download the latest checkpoint from Google Drive to the backend server in the background."""
+    global sync_state
+    if sync_state["status"] == "syncing":
+        raise HTTPException(status_code=400, detail="A synchronization is already in progress.")
+        
+    dest_path = os.path.join(workspace_dir, "custom_llm", "checkpoint_cloud.pt")
+    background_tasks.add_task(perform_weight_sync, request.share_link, dest_path)
+    return {
+        "success": True, 
+        "message": "Weights synchronization started in the background. Please wait 1-2 minutes."
+    }
+
+@app.get("/api/model/sync/status")
+def get_sync_status():
+    global sync_state
+    return sync_state
 
 @app.get("/api/debug/download")
 def debug_download(share_link: str):
