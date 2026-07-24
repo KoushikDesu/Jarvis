@@ -218,10 +218,10 @@ function initSettings() {
                         const statusResp = await fetch(`${API_URL}/api/model/sync/status`);
                         if (statusResp.ok) {
                             const statusData = await statusResp.json();
-                            syncStatus.textContent = statusData.message || "Syncing...";
                             
                             if (statusData.status === "success") {
                                 clearInterval(pollInterval);
+                                syncStatus.textContent = statusData.message || "Weights synced successfully!";
                                 syncStatus.style.color = "#10b981";
                                 syncBtn.disabled = false;
                                 syncBtn.style.opacity = "1";
@@ -240,10 +240,20 @@ function initSettings() {
                                 }
                             } else if (statusData.status === "failed") {
                                 clearInterval(pollInterval);
+                                syncStatus.textContent = statusData.message || "Sync failed.";
                                 syncStatus.style.color = "#ef4444";
                                 syncBtn.disabled = false;
                                 syncBtn.style.opacity = "1";
                                 showToast("Weight sync failed", "error");
+                            } else if (statusData.status === "idle") {
+                                clearInterval(pollInterval);
+                                syncStatus.textContent = "Sync interrupted by server restart. Please try again.";
+                                syncStatus.style.color = "#ef4444";
+                                syncBtn.disabled = false;
+                                syncBtn.style.opacity = "1";
+                                showToast("Sync task was reset", "error");
+                            } else {
+                                syncStatus.textContent = statusData.message || "Syncing...";
                             }
                         }
                     } catch (pollErr) {
