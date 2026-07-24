@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Clone - Custom LLM Platform</title>
+    <title>Jarvis</title>
     <!-- Outfit Font for Headings, Inter for Body, JetBrains Mono for Code -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,7 +32,7 @@
                         </linearGradient>
                     </defs>
                 </svg>
-                <span>Jarvis <small style="font-size:10px;opacity:0.6;font-weight:normal">v0.1</small></span>
+                <span>Jarvis <small style="font-size:10px;opacity:0.6;font-weight:normal">v0.2</small></span>
             </div>
             
             <nav class="nav-menu">
@@ -49,7 +49,7 @@
                         <line x1="12" y1="19" x2="12" y2="23"></line>
                         <line x1="8" y1="23" x2="16" y2="23"></line>
                     </svg>
-                    <span>Gemini Live</span>
+                    <span>Jarvis Live</span>
                 </button>
                 <button class="nav-item" data-tab="training">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -151,7 +151,7 @@
             <section class="tab-panel" id="panel-voice">
                 <div class="voice-container">
                     <div class="voice-header">
-                        <h1>Gemini Live</h1>
+                        <h1>Jarvis Live</h1>
                         <p class="subtitle">Experience continuous real-time audio conversations with interruptions</p>
                     </div>
 
@@ -230,7 +230,7 @@
                                 </ul>
                             </div>
                             
-                            <a href="#" id="colab-download-link" download class="btn btn-secondary" style="text-decoration:none; text-align:center; padding: 14px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; font-weight: bold; border-radius: 8px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); display: block; transition: all 0.3s ease;">
+                            <a href="https://github.com/KoushikDesu/Jarvis/raw/main/custom_llm/colab_training.ipynb" id="colab-download-link" download class="btn btn-secondary" style="text-decoration:none; text-align:center; padding: 14px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; font-weight: bold; border-radius: 8px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); display: block; transition: all 0.3s ease;">
                                 <svg style="width:16px;height:16px;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                                 <span style="vertical-align:middle;">Download Colab Notebook</span>
                             </a>
@@ -325,7 +325,6 @@
                         <label for="model-routing">Active Core Model</label>
                         <select id="model-routing" class="premium-select">
                             <option value="gemini">Google Gemini (Cloud Multimodal API)</option>
-                            <option value="ollama">Ollama Local Interface (Fully Offline)</option>
                             <option value="custom">Our Custom Model (Trained from Scratch)</option>
                         </select>
                         <p class="field-desc">Route prompts between local scratch models, network models, or local heavy models.</p>
@@ -341,12 +340,6 @@
                         <label for="gemini-key-input">Gemini API Key</label>
                         <input type="password" id="gemini-key-input" placeholder="AIzaSy...">
                         <p class="field-desc">Your key is stored securely in your browser's LocalStorage and is sent directly in request headers. <a href="https://aistudio.google.com/" target="_blank">Get a free key here</a>.</p>
-                    </div>
-
-                    <div class="settings-group" id="settings-group-ollama" style="display: none;">
-                        <label for="ollama-model-input">Ollama Model Tag</label>
-                        <input type="text" id="ollama-model-input" value="phi3" placeholder="llama3, gemma, phi3...">
-                        <p class="field-desc">Specify which local model you have installed inside Ollama. Make sure the Ollama server is running on port 11434.</p>
                     </div>
                     
                     <button class="save-settings-btn" id="save-settings-btn">Save Configurations</button>

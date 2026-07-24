@@ -16,6 +16,49 @@ let recognition = null;
 let speechUtterance = null;
 let voicesList = [];
 
+// Modern Toast Notification Utility
+function showToast(message, type = "success") {
+    const toast = document.createElement("div");
+    toast.style.position = "fixed";
+    toast.style.bottom = "24px";
+    toast.style.right = "24px";
+    toast.style.background = type === "success" 
+        ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" 
+        : "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)";
+    toast.style.color = "white";
+    toast.style.padding = "14px 28px";
+    toast.style.borderRadius = "10px";
+    toast.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 0 15px rgba(255,255,255,0.05)";
+    toast.style.zIndex = "9999";
+    toast.style.fontSize = "0.95rem";
+    toast.style.fontFamily = "system-ui, sans-serif";
+    toast.style.fontWeight = "600";
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(30px)";
+    toast.style.transition = "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
+    toast.style.backdropFilter = "blur(8px)";
+    toast.style.border = "1px solid rgba(255,255,255,0.1)";
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // Force reflow
+    toast.offsetHeight;
+    
+    // Animate in
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0)";
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(30px)";
+        setTimeout(() => {
+            toast.remove();
+        }, 400);
+    }, 3200);
+}
+
 // Initialize Page
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
@@ -25,12 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initVoice();
     initTraining();
     checkNetworkStatus();
-    
-    // Set dynamic Colab download link
-    const colabLink = document.getElementById("colab-download-link");
-    if (colabLink) {
-        colabLink.href = `${API_URL}/api/download/colab`;
-    }
     
     // Periodically check connection status
     setInterval(checkNetworkStatus, 5000);
@@ -94,9 +131,7 @@ function initTabs() {
 function initSettings() {
     const modelSelect = document.getElementById("model-routing");
     const geminiGroup = document.getElementById("settings-group-key");
-    const ollamaGroup = document.getElementById("settings-group-ollama");
     const geminiKeyInput = document.getElementById("gemini-key-input");
-    const ollamaModelInput = document.getElementById("ollama-model-input");
     const gdriveLinkInput = document.getElementById("gdrive-link-input");
     const backendUrlInput = document.getElementById("backend-url-input");
     const saveBtn = document.getElementById("save-settings-btn");
@@ -106,13 +141,11 @@ function initSettings() {
     // Load local storage values
     const savedModel = localStorage.getItem("model_routing") || "gemini";
     const savedGeminiKey = localStorage.getItem("gemini_api_key") || "";
-    const savedOllamaModel = localStorage.getItem("ollama_model_name") || "phi3";
     const savedGDriveLink = localStorage.getItem("gdrive_share_link") || "";
-    const savedBackendUrl = localStorage.getItem("backend_api_url") || "http://127.0.0.1:8000";
+    const savedBackendUrl = localStorage.getItem("backend_api_url") || "https://jarvis-backend-0cvr.onrender.com";
     
     modelSelect.value = savedModel;
     geminiKeyInput.value = savedGeminiKey;
-    ollamaModelInput.value = savedOllamaModel;
     gdriveLinkInput.value = savedGDriveLink;
     if (backendUrlInput) {
         backendUrlInput.value = savedBackendUrl;
@@ -126,25 +159,18 @@ function initSettings() {
     });
     
     saveBtn.addEventListener("click", () => {
-        const newUrl = backendUrlInput ? backendUrlInput.value.trim() : "http://127.0.0.1:8000";
+        const newUrl = backendUrlInput ? backendUrlInput.value.trim() : "https://jarvis-backend-0cvr.onrender.com";
         
         localStorage.setItem("model_routing", modelSelect.value);
         localStorage.setItem("gemini_api_key", geminiKeyInput.value);
-        localStorage.setItem("ollama_model_name", ollamaModelInput.value);
         localStorage.setItem("gdrive_share_link", gdriveLinkInput.value);
         localStorage.setItem("backend_api_url", newUrl);
         
         // Dynamically update active API URL
         API_URL = newUrl;
         
-        // Update notebook download link endpoint
-        const colabLink = document.getElementById("colab-download-link");
-        if (colabLink) {
-            colabLink.href = `${API_URL}/api/download/colab`;
-        }
-        
         updateModelTag(modelSelect.value);
-        alert("Configurations saved successfully!");
+        showToast("Configurations saved successfully!");
     });
 
     syncBtn.addEventListener("click", async () => {
@@ -173,14 +199,29 @@ function initSettings() {
             if (resp.ok) {
                 syncStatus.textContent = data.message || "Weights synced successfully!";
                 syncStatus.style.color = "#10b981";
+                showToast("Weights synced successfully!");
+                
+                // Automatically fetch training history and update the loss curve chart
+                try {
+                    const resHistory = await fetch(`${API_URL}/api/train/history`);
+                    const history = await resHistory.json();
+                    if (history && history.length > 0) {
+                        plotLossChart(history);
+                        showToast("Loss curves updated successfully!");
+                    }
+                } catch (historyErr) {
+                    console.error("Error loading loss history:", historyErr);
+                }
             } else {
                 syncStatus.textContent = `Error: ${data.detail || "Failed to download weights"}`;
                 syncStatus.style.color = "#ef4444";
+                showToast("Failed to sync weights", "error");
             }
         } catch (err) {
             console.error(err);
             syncStatus.textContent = "Network error: Connection to backend failed.";
             syncStatus.style.color = "#ef4444";
+            showToast("Connection to server failed", "error");
         } finally {
             syncBtn.disabled = false;
             syncBtn.style.opacity = "1";
@@ -188,17 +229,16 @@ function initSettings() {
     });
     
     function updateSettingsVisibility(val) {
-        geminiGroup.style.display = val === "gemini" ? "flex" : "none";
-        ollamaGroup.style.display = val === "ollama" ? "flex" : "none";
+        if (geminiGroup) {
+            geminiGroup.style.display = val === "gemini" ? "flex" : "none";
+        }
     }
     
     function updateModelTag(val) {
         const tag = document.getElementById("current-model-tag");
+        if (!tag) return;
         if (val === "gemini") {
             tag.textContent = "Using Gemini 1.5 Flash (Google Cloud)";
-        } else if (val === "ollama") {
-            const mName = ollamaModelInput.value || "phi3";
-            tag.textContent = `Using Local Ollama (${mName})`;
         } else {
             tag.textContent = "Using Custom Model (Trained from Scratch)";
         }
