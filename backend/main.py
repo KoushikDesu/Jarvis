@@ -433,7 +433,10 @@ def get_train_history():
 @app.get("/api/download/colab")
 def download_colab():
     from fastapi.responses import FileResponse
-    notebook_path = "c:/Rarey Temp/Ai/With Ai/custom_llm/colab_training.ipynb"
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    workspace_dir = os.path.dirname(backend_dir)
+    notebook_path = os.path.join(workspace_dir, "custom_llm", "colab_training.ipynb")
+    
     if os.path.exists(notebook_path):
         return FileResponse(notebook_path, media_type="application/octet-stream", filename="colab_training.ipynb")
     raise HTTPException(status_code=404, detail="Notebook file not found.")
