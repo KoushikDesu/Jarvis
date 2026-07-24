@@ -1,7 +1,7 @@
 // Gemini Clone Frontend Application Logic
 
 // API Configuration
-let API_URL = localStorage.getItem("backend_api_url") || "http://127.0.0.1:8000";
+let API_URL = localStorage.getItem("backend_api_url") || "https://jarvis-backend-0cvr.onrender.com";
 
 // State Variables
 let currentTab = "chat";
