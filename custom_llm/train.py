@@ -55,8 +55,17 @@ def save_checkpoint(model, optimizer, epoch, step, loss, path):
         except:
             pass
             
+    # Clean compile prefixes (_orig_mod.) from state dict before saving
+    raw_state_dict = model.state_dict()
+    cleaned_state_dict = {}
+    for k, v in raw_state_dict.items():
+        if k.startswith("_orig_mod."):
+            cleaned_state_dict[k[len("_orig_mod."):]] = v
+        else:
+            cleaned_state_dict[k] = v
+
     checkpoint = {
-        'model_state_dict': model.state_dict(),
+        'model_state_dict': cleaned_state_dict,
         'optimizer_state_dict': optimizer.state_dict(),
         'epoch': epoch,
         'step': step,
@@ -141,7 +150,17 @@ def train():
         # Load from saved configuration to prevent architectural conflicts
         config = checkpoint['config']
         model = GPT(config)
-        model.load_state_dict(checkpoint['model_state_dict'])
+        
+        # Clean compile prefixes (_orig_mod.) from state dict
+        raw_state_dict = checkpoint['model_state_dict']
+        cleaned_state_dict = {}
+        for k, v in raw_state_dict.items():
+            if k.startswith("_orig_mod."):
+                cleaned_state_dict[k[len("_orig_mod."):]] = v
+            else:
+                cleaned_state_dict[k] = v
+                
+        model.load_state_dict(cleaned_state_dict)
         start_epoch = checkpoint['epoch']
         start_step = checkpoint['step']
         last_loss = checkpoint['loss']

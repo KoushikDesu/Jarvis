@@ -157,12 +157,21 @@ def run_custom_model_inference(prompt: str, max_tokens: int = 150):
             # Load checkpoint dict
             checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
             config = checkpoint['config']
-            state_dict = checkpoint['model_state_dict']
+            raw_state_dict = checkpoint['model_state_dict']
             
             # Immediately delete the massive checkpoint wrapper dictionary to free RAM
             del checkpoint
             import gc
             gc.collect()
+            
+            # Clean compile prefixes (_orig_mod.) from state dict
+            state_dict = {}
+            for k, v in raw_state_dict.items():
+                if k.startswith("_orig_mod."):
+                    state_dict[k[len("_orig_mod."):]] = v
+                else:
+                    state_dict[k] = v
+            del raw_state_dict
             
             # Instantiate model
             custom_model = GPT(config)
